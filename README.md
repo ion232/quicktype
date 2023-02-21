@@ -22,8 +22,8 @@
 | [Ruby](https://app.quicktype.io/#l=ruby) | [JavaScript](https://app.quicktype.io/#l=js) | [Flow](https://app.quicktype.io/#l=flow) | [Rust](https://app.quicktype.io/#l=rust) | [Kotlin](https://app.quicktype.io/#l=kotlin) |
 | ---------------------------------------- | -------------------------------------------- | ---------------------------------------- | ---------------------------------------- | -------------------------------------------- |
 
-| [Dart](https://app.quicktype.io/#l=dart) | [Python](https://app.quicktype.io/#l=python) | [C#](https://app.quicktype.io/#l=cs) | [Go](https://app.quicktype.io/#l=go) | [C++](https://app.quicktype.io/#l=cpp) |
-| ---------------------------------------- | -------------------------------------------- | ------------------------------------ | ------------------------------------ | -------------------------------------- |
+| [Dart](https://app.quicktype.io/#l=dart) | [Python](https://app.quicktype.io/#l=python) | [C#](https://app.quicktype.io/#l=cs) | [Go](https://app.quicktype.io/#l=go) | [C++](https://app.quicktype.io/#l=cpp) | [Zig](https://app.quicktype.io/#l=zig) |
+| ---------------------------------------- | -------------------------------------------- | ------------------------------------ | ------------------------------------ | -------------------------------------- | -------------------------------------- |
 
 | [Java](https://app.quicktype.io/#l=java) | [TypeScript](https://app.quicktype.io/#l=ts) | [Swift](https://app.quicktype.io/#l=swift) | [Objective-C](https://app.quicktype.io/#l=objc) | [Elm](https://app.quicktype.io/#l=elm) |
 | ---------------------------------------- | -------------------------------------------- | ------------------------------------------ | ----------------------------------------------- | -------------------------------------- |
