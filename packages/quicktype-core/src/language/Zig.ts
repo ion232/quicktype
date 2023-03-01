@@ -1,3 +1,5 @@
+
+import { mapFirst } from "collection-utils";
 import { TypeKind, Type, ClassType, EnumType, UnionType, ClassProperty } from "../Type";
 import { matchType, nullableFromUnion, removeNullFromUnion } from "../TypeUtils";
 import { Name, DependencyName, Namer, funPrefixNamer } from "../Naming";
@@ -7,26 +9,21 @@ import {
     isLetterOrUnderscoreOrDigit,
     stringEscape,
     splitIntoWords,
+    isAscii,
     combineWords,
     firstUpperWordStyle,
-    allUpperWordStyle,
     allLowerWordStyle,
-    camelCase
 } from "../support/Strings";
 import { assert, defined } from "../support/Support";
-import { StringOption, BooleanOption, Option, OptionValues, getOptionValues } from "../RendererOptions";
-import { Sourcelike, maybeAnnotated, modifySource } from "../Source";
+import { BooleanOption, Option, OptionValues, getOptionValues } from "../RendererOptions";
+import { Sourcelike, maybeAnnotated } from "../Source";
 import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../Annotation";
 import { TargetLanguage } from "../TargetLanguage";
-import { ConvenienceRenderer } from "../ConvenienceRenderer";
+import { ConvenienceRenderer, ForbiddenWordsInfo } from "../ConvenienceRenderer";
 import { RenderContext } from "../Renderer";
-import { lowerCase, snakeCase } from "lodash";
 
 export const zigOptions = {
-    justTypes: new BooleanOption("just-types", "Plain types only", false),
-    justTypesAndPackage: new BooleanOption("just-types-and-package", "Plain types with package only", false),
-    packageName: new StringOption("package", "Generated package name", "NAME", "main"),
-    multiFileOutput: new BooleanOption("multi-file-output", "Renders each top-level object in its own Zig file", false)
+    public: new BooleanOption("public", "Make types and fields public", true)
 };
 
 export class ZigTargetLanguage extends TargetLanguage {
@@ -35,7 +32,7 @@ export class ZigTargetLanguage extends TargetLanguage {
     }
 
     protected getOptions(): Option<any>[] {
-        return [zigOptions.justTypes, zigOptions.packageName, zigOptions.multiFileOutput, zigOptions.justTypesAndPackage];
+        return [zigOptions.public];
     }
 
     get supportsUnionsWithBothNumberTypes(): boolean {
@@ -111,6 +108,14 @@ const keywords = [
 const snakeNamingFunction = funPrefixNamer("default", (original: string) => zigNameStyle(original, true));
 const camelNamingFunction = funPrefixNamer("camel", (original: string) => zigNameStyle(original, false));
 
+const isAsciiLetterOrUnderscore = (codePoint: number): boolean => {
+    if (!isAscii(codePoint)) {
+        return false;
+    }
+
+    return isLetterOrUnderscore(codePoint);
+};
+
 const legalizeName = legalizeCharacters(isLetterOrUnderscoreOrDigit);
 
 function zigNameStyle(original: string, isSnakeCase: boolean): string {
@@ -126,7 +131,7 @@ function zigNameStyle(original: string, isSnakeCase: boolean): string {
         wordStyle,
         wordStyle,
         isSnakeCase ? "_" : "",
-        isLetterOrUnderscore
+        isAsciiLetterOrUnderscore
     );
 
     return combined === "_" ? "_underscore" : combined;
@@ -170,31 +175,27 @@ export class ZigRenderer extends ConvenienceRenderer {
     }
 
     protected makeEnumCaseNamer(): Namer {
-        return camelNamingFunction;
+        return snakeNamingFunction;
     }
 
     protected forbiddenNamesForGlobalNamespace(): string[] {
         return keywords;
     }
 
-    protected get enumCasesInGlobalNamespace(): boolean {
-        return true;
+    protected forbiddenForObjectProperties(_c: ClassType, _className: Name): ForbiddenWordsInfo {
+        return { names: [], includeGlobalForbidden: true };
     }
 
-    protected makeTopLevelDependencyNames(_: Type, topLevelName: Name): DependencyName[] {
-        const unmarshalName = new DependencyName(
-            snakeNamingFunction,
-            topLevelName.order,
-            lookup => `unmarshal_${lookup(topLevelName)}`
-        );
-        return [unmarshalName];
+    protected forbiddenForUnionMembers(_u: UnionType, _unionName: Name): ForbiddenWordsInfo {
+        return { names: [], includeGlobalForbidden: true };
+    }
+
+    protected forbiddenForEnumCases(_e: EnumType, _enumName: Name): ForbiddenWordsInfo {
+        return { names: [], includeGlobalForbidden: true };
     }
 
     /// startFile takes a file name, lowercases it, appends ".zig" to it, and sets it as the current filename.
     protected startFile(basename: Sourcelike): void {
-        if (this._options.multiFileOutput === false) {
-            return;
-        }
 
         assert(this._currentFilename === undefined, "Previous file wasn't finished: " + this._currentFilename);
         // FIXME: The filenames should actually be Sourcelikes, too
@@ -204,30 +205,40 @@ export class ZigRenderer extends ConvenienceRenderer {
 
     /// endFile pushes the current file name onto the collection of finished files and then resets the current file name. These finished files are used in index.ts to write the output.
     protected endFile(): void {
-        if (this._options.multiFileOutput === false) {
-            return;
-        }
-
         this.finishFile(defined(this._currentFilename));
         this._currentFilename = undefined;
     }
 
-    private emitBlock(line: Sourcelike, f: () => void): void {
-        this.emitLine(line, " {");
+    private emitBlock(preamble: Sourcelike, last: string, f: () => void): void {
+        this.emitLine(preamble, "{");
         this.indent(f);
-        this.emitLine("};");
+        this.emitLine(`}${last}`);
     }
 
-    private emitFunc(decl: Sourcelike, f: () => void): void {
-        this.emitBlock(["fn ", decl], f);
+    private emitGettyBlock(renameFields: Map<Name, string>, isSerialize: boolean) {
+        const fieldAttributesLine = (jsonName: string) => {
+            return `.rename = "${jsonName}",`;
+        };
+        const attributesBlock = () => {
+            renameFields.forEach((jsonName, name, _) => {
+                this.emitLine([".", name, " = .{ ", fieldAttributesLine(jsonName), " },"])
+            });
+        };
+        const attributes = () => {
+            this.emitBlock(["const attributes = ."], ";", attributesBlock);
+        };
+
+        const extension = isSerialize ? "sb" : "db";
+        this.emitBlock([`const @"getty.${extension}" = struct `], ";", attributes);
     }
 
-    private emitStruct(c: ClassType, name: Name): void {
-        const structBody = () => this.forEachClassProperty(c, "none", (name, jsonName, prop) => {
-            this.emitDescription(this.descriptionForClassProperty(c, jsonName));
-            this.emitLine(name, ": ", this.propertyZigType(prop), ",");
-        });
-        this.emitBlock(["const ", name, " = struct"], structBody);
+    private emitSerdeBlocks(renameFields: Map<Name, string>) {
+        if (renameFields.size > 0) {
+            this.emitLine();
+            this.emitGettyBlock(renameFields, false);
+            this.emitLine();
+            this.emitGettyBlock(renameFields, true);
+        }
     }
 
     private nullableZigType(t: Type, withIssues: boolean): Sourcelike {
@@ -246,7 +257,7 @@ export class ZigRenderer extends ConvenienceRenderer {
     private zigType(t: Type, withIssues = false): Sourcelike {
         return matchType<Sourcelike>(
             t,
-            _anyType => maybeAnnotated(withIssues, anyTypeIssueAnnotation, "?[]u8"),
+            _anyType => maybeAnnotated(withIssues, anyTypeIssueAnnotation, "std.json.Value"),
             _nullType => maybeAnnotated(withIssues, nullTypeIssueAnnotation, "?[]u8"),
             _boolType => "bool",
             _integerType => "i64",
@@ -262,7 +273,6 @@ export class ZigRenderer extends ConvenienceRenderer {
                 } else {
                     valueSource = this.zigType(v, withIssues);
                 }
-                // This doesn't actually work.
                 return ["std.StringHashMap(", valueSource, ")"];
             },
             enumType => this.nameForNamedType(enumType),
@@ -275,45 +285,42 @@ export class ZigRenderer extends ConvenienceRenderer {
     }
 
     private emitTopLevel(t: Type, name: Name): void {
-        this.startFile(name);
+    }
 
-        if (
-            this._options.multiFileOutput &&
-            this._options.justTypes === false &&
-            this._options.justTypesAndPackage === false &&
-            this.leadingComments === undefined
-        ) {
-            this.emitLineOnce(
-                "// This file was generated from JSON Schema using quicktype, do not modify it directly."
-            );
-            this.emitLineOnce("// To parse and unparse this JSON data, add this code to your project and do:");
-            this.emitLineOnce("//");
-        }
-
-        if (this.namedTypeToNameForTopLevel(t) === undefined) {
-            this.emitLine("type ", name, " ", this.zigType(t));
-        }
+    private emitStruct(c: ClassType, name: Name): void {
+        const structBody = () => {
+            var renameFields = new Map<Name, string>();
+            this.forEachClassProperty(c, "none", (name, jsonName, prop) => {
+                this.emitDescription(this.descriptionForClassProperty(c, jsonName));
+                this.emitLine(name, ": ", this.propertyZigType(prop), ",")
+                if (this.sourcelikeToString(name) !== jsonName) {
+                    renameFields.set(name, jsonName);
+                }
+            });
+            this.emitSerdeBlocks(renameFields);
+        };
+        this.emitBlock(["const ", name, " = struct "], ";", structBody);
     }
 
     private emitClass(c: ClassType, className: Name): void {
-        this.startFile(className);
         this.emitDescription(this.descriptionForType(c));
         this.emitStruct(c, className);
-        this.endFile();
     }
 
     private emitEnum(e: EnumType, enumName: Name): void {
-        this.startFile(enumName);
         this.emitDescription(this.descriptionForType(e));
-        this.emitLine("type ", enumName, " string");
-        this.emitLine("const (");
-        this.indent(() =>
+
+        const enumBody = () => {
+            var renameFields = new Map<Name, string>();
             this.forEachEnumCase(e, "none", (name, jsonName) => {
-                this.emitLine(name, " ", enumName, ' = "', stringEscape(jsonName), '"');
-            })
-        );
-        this.emitLine(")");
-        this.endFile();
+                this.emitLine([name, ","]);
+                if (this.sourcelikeToString(name) !== jsonName) {
+                    renameFields.set(name, jsonName);
+                }
+            });
+            this.emitSerdeBlocks(renameFields);
+        };
+        this.emitBlock(["const ", enumName, " = enum "], ";", enumBody);
     }
 
     private emitUnion(u: UnionType, unionName: Name): void {
@@ -321,55 +328,47 @@ export class ZigRenderer extends ConvenienceRenderer {
 
         const [, nonNulls] = removeNullFromUnion(u);
 
-        this.emitBlock(["const ", unionName, " = union(enum)"], () => {
+        this.emitBlock(["const ", unionName, " = union(enum)"], ";", () => {
             this.forEachUnionMember(u, nonNulls, "none", null, (fieldName, t) => {
                 this.emitLine([fieldName, ": ", this.zigType(t), ","]);
             });
         });
     }
 
-    private emitSingleFileHeaderComments(): void {
-        this.forEachTopLevel("none", (_: Type, name: Name) => {
-            this.emitLine("//");
-        });
-    }
-
-    private emitHelperFunctions(): void {
-        if (this.haveNamedUnions) {
-            this.startFile("JSONSchemaSupport");
-            if (this._options.multiFileOutput) {
-                this.emitLineOnce('const std = @import("std");');
-            }
-            this.ensureBlankLine();
-            this.endFile();
-        }
-    }
-
-    protected emitSourceStructure(): void {
-        if (
-            this._options.multiFileOutput === false &&
-            this._options.justTypes === false &&
-            this._options.justTypesAndPackage === false &&
-            this.leadingComments === undefined
-        ) {
-            this.emitSingleFileHeaderComments();
-        }
-
-        this.forEachTopLevel(
-            "leading-and-interposing",
-            (t, name) => this.emitTopLevel(t, name),
-            t =>
-                !(this._options.justTypes || this._options.justTypesAndPackage) ||
-                this.namedTypeToNameForTopLevel(t) === undefined
-        );
-        this.forEachObject("leading-and-interposing", (c: ClassType, className: Name) => this.emitClass(c, className));
-        this.forEachEnum("leading-and-interposing", (u: EnumType, enumName: Name) => this.emitEnum(u, enumName));
-        this.forEachUnion("leading-and-interposing", (u: UnionType, unionName: Name) => this.emitUnion(u, unionName));
-
-        if (this._options.justTypes || this._options.justTypesAndPackage) {
+    private emitLeadingComments(): void {
+        if (this.leadingComments !== undefined) {
+            this.emitCommentLines(this.leadingComments);
             return;
         }
 
-        this.emitHelperFunctions();
+        const topLevelName = defined(mapFirst(this.topLevels)).getCombinedName();
+        this.emitMultiline(
+            `// Example code showing how to deserialize a model using "getty-zig/json".
+//
+// const std = @import("std");
+// const json = @import("json");
+//
+// pub fn main() anyerror!void {
+//    const json_string = "...";
+//    const model = try json.fromSlice(null, ${topLevelName}, json_string);
+//    std.debug.print("\{any\}\\n", .\{model\});
+// }`
+        );
+    }
+
+    protected emitSourceStructure(): void {
+        this.emitLeadingComments();
+        this.emitLine();
+        this.emitLine(`const std = @import("std");`);
+
+        this.forEachTopLevel(
+            "leading",
+            (t, name) => this.emitTopLevel(t, name),
+            t => this.namedTypeToNameForTopLevel(t) === undefined
+        );
+
+        this.forEachObject("leading-and-interposing", (c: ClassType, className: Name) => this.emitClass(c, className));
+        this.forEachUnion("leading-and-interposing", (u: UnionType, unionName: Name) => this.emitUnion(u, unionName));
+        this.forEachEnum("leading-and-interposing", (e: EnumType, enumName: Name) => this.emitEnum(e, enumName));
     }
 }
