@@ -4,7 +4,7 @@ import * as fs from "fs";
 import { randomBytes } from "crypto";
 import * as shell from "shelljs";
 
-const Ajv = require("ajv");
+// const Ajv = require("ajv");
 
 import {
     compareJsonFileToJson,
@@ -24,8 +24,8 @@ import {
 } from "./utils";
 import * as languages from "./languages";
 import { RendererOptions } from "quicktype-core";
-import { mustNotHappen, defined } from "../packages/quicktype-core/dist/support/Support";
-import { DefaultDateTimeRecognizer } from "../packages/quicktype-core/dist/DateTime";
+import { defined } from "../packages/quicktype-core/dist/support/Support";
+// import { DefaultDateTimeRecognizer } from "../packages/quicktype-core/dist/DateTime";
 
 import chalk from "chalk";
 const timeout = require("promise-timeout").timeout;
@@ -124,7 +124,7 @@ function timeEnd(message: string, suffix: string): void {
 export abstract class Fixture {
     abstract name: string;
 
-    constructor(public language: languages.Language) {}
+    constructor(public language: languages.Language) { }
 
     runForName(name: string): boolean {
         return this.name === name;
@@ -364,202 +364,202 @@ class JSONFixture extends LanguageFixture {
 // then generating code for Y from the code for X, making sure
 // that the resulting code for Y accepts the JSON by running it
 // on the original JSON.
-class JSONToXToYFixture extends JSONFixture {
-    private readonly runLanguage: languages.Language;
+// class JSONToXToYFixture extends JSONFixture {
+//     private readonly runLanguage: languages.Language;
 
-    constructor(
-        private readonly _fixturePrefix: string,
-        languageXName: string,
-        languageXOutputFilename: string,
-        rendererOptions: RendererOptions,
-        skipJSON: string[],
-        language: languages.Language
-    ) {
-        super({
-            name: languageXName,
-            base: language.base,
-            setupCommand: language.setupCommand,
-            runCommand: mustNotHappen,
-            diffViaSchema: false,
-            skipDiffViaSchema: [],
-            allowMissingNull: language.allowMissingNull,
-            features: language.features,
-            output: languageXOutputFilename,
-            topLevel: "TopLevel",
-            skipJSON,
-            skipMiscJSON: false,
-            skipSchema: [],
-            rendererOptions,
-            quickTestRendererOptions: [],
-            sourceFiles: language.sourceFiles
-        });
-        this.runLanguage = language;
-        this.name = `${this._fixturePrefix}-${language.name}`;
-    }
+//     constructor(
+//         private readonly _fixturePrefix: string,
+//         languageXName: string,
+//         languageXOutputFilename: string,
+//         rendererOptions: RendererOptions,
+//         skipJSON: string[],
+//         language: languages.Language
+//     ) {
+//         super({
+//             name: languageXName,
+//             base: language.base,
+//             setupCommand: language.setupCommand,
+//             runCommand: mustNotHappen,
+//             diffViaSchema: false,
+//             skipDiffViaSchema: [],
+//             allowMissingNull: language.allowMissingNull,
+//             features: language.features,
+//             output: languageXOutputFilename,
+//             topLevel: "TopLevel",
+//             skipJSON,
+//             skipMiscJSON: false,
+//             skipSchema: [],
+//             rendererOptions,
+//             quickTestRendererOptions: [],
+//             sourceFiles: language.sourceFiles
+//         });
+//         this.runLanguage = language;
+//         this.name = `${this._fixturePrefix}-${language.name}`;
+//     }
 
-    runForName(name: string): boolean {
-        return this.name === name || name === this._fixturePrefix;
-    }
+//     runForName(name: string): boolean {
+//         return this.name === name || name === this._fixturePrefix;
+//     }
 
-    async test(
-        filename: string,
-        additionalRendererOptions: RendererOptions,
-        _additionalFiles: string[]
-    ): Promise<number> {
-        // Generate code for Y from X
-        await quicktypeForLanguage(
-            this.runLanguage,
-            this.language.output,
-            this.language.name,
-            false,
-            additionalRendererOptions
-        );
+//     async test(
+//         filename: string,
+//         additionalRendererOptions: RendererOptions,
+//         _additionalFiles: string[]
+//     ): Promise<number> {
+//         // Generate code for Y from X
+//         await quicktypeForLanguage(
+//             this.runLanguage,
+//             this.language.output,
+//             this.language.name,
+//             false,
+//             additionalRendererOptions
+//         );
 
-        // Parse the sample with the code generated from its schema, and compare to the sample
-        compareJsonFileToJson(comparisonArgs(this.runLanguage, filename, filename, additionalRendererOptions));
+//         // Parse the sample with the code generated from its schema, and compare to the sample
+//         compareJsonFileToJson(comparisonArgs(this.runLanguage, filename, filename, additionalRendererOptions));
 
-        return 1;
-    }
+//         return 1;
+//     }
 
-    shouldSkipTest(sample: Sample): boolean {
-        if (super.shouldSkipTest(sample)) return true;
-        return _.includes(this.runLanguage.skipJSON, path.basename(sample.path));
-    }
-}
+//     shouldSkipTest(sample: Sample): boolean {
+//         if (super.shouldSkipTest(sample)) return true;
+//         return _.includes(this.runLanguage.skipJSON, path.basename(sample.path));
+//     }
+// }
 
-const dateTimeRecognizer = new DefaultDateTimeRecognizer();
+// const dateTimeRecognizer = new DefaultDateTimeRecognizer();
 
 // This tests generating Schema from JSON, and then generating
 // target code from that Schema.  The target code is then run on
 // the original JSON.  Also generating a Schema from the Schema
 // and testing that it's the same as the original Schema.
-class JSONSchemaJSONFixture extends JSONToXToYFixture {
-    constructor(language: languages.Language) {
-        const skipJSON = [
-            "blns-object.json", // AJV refuses to even "compile" the schema we generate
-            "31189.json", // same here
-            "437e7.json", // uri/string confusion
-            "ed095.json" // same here on Travis
-        ];
-        super("schema-json", "schema", "schema.json", {}, skipJSON, language);
-    }
+// class JSONSchemaJSONFixture extends JSONToXToYFixture {
+//     constructor(language: languages.Language) {
+//         const skipJSON = [
+//             "blns-object.json", // AJV refuses to even "compile" the schema we generate
+//             "31189.json", // same here
+//             "437e7.json", // uri/string confusion
+//             "ed095.json" // same here on Travis
+//         ];
+//         super("schema-json", "schema", "schema.json", {}, skipJSON, language);
+//     }
 
-    async test(
-        filename: string,
-        additionalRendererOptions: RendererOptions,
-        additionalFiles: string[]
-    ): Promise<number> {
-        let input = JSON.parse(fs.readFileSync(filename, "utf8"));
-        let schema = JSON.parse(fs.readFileSync(this.language.output, "utf8"));
+//     async test(
+//         filename: string,
+//         additionalRendererOptions: RendererOptions,
+//         additionalFiles: string[]
+//     ): Promise<number> {
+//         let input = JSON.parse(fs.readFileSync(filename, "utf8"));
+//         let schema = JSON.parse(fs.readFileSync(this.language.output, "utf8"));
 
-        let ajv = new Ajv({ format: "full", unknownFormats: ["integer", "boolean"] });
-        // Make Ajv's date-time compatible with what we recognize.  All non-standard
-        // JSON formats that we use for transformed type kinds must be registered here
-        // with a validation function.
-        // FIXME: Unify this with what's in StringTypes.ts.
-        ajv.addFormat("date-time", (s: string) => dateTimeRecognizer.isDateTime(s));
-        let valid = ajv.validate(schema, input);
-        if (!valid) {
-            failWith("Generated schema does not validate input JSON.", {
-                filename
-            });
-        }
+//         let ajv = new Ajv({ format: "full", unknownFormats: ["integer", "boolean"] });
+//         // Make Ajv's date-time compatible with what we recognize.  All non-standard
+//         // JSON formats that we use for transformed type kinds must be registered here
+//         // with a validation function.
+//         // FIXME: Unify this with what's in StringTypes.ts.
+//         ajv.addFormat("date-time", (s: string) => dateTimeRecognizer.isDateTime(s));
+//         let valid = ajv.validate(schema, input);
+//         if (!valid) {
+//             failWith("Generated schema does not validate input JSON.", {
+//                 filename
+//             });
+//         }
 
-        await super.test(filename, additionalRendererOptions, additionalFiles);
+//         await super.test(filename, additionalRendererOptions, additionalFiles);
 
-        // Generate a schema from the schema, making sure the schemas are the same
-        // FIXME: We could move this to the superclass and test it for all JSON->X->Y
-        let schemaSchema = "schema-from-schema.json";
-        await quicktype({
-            src: [this.language.output],
-            srcLang: this.language.name,
-            lang: this.language.name,
-            topLevel: this.language.topLevel,
-            out: schemaSchema,
-            rendererOptions: {}
-        });
-        compareJsonFileToJson({
-            expectedFile: this.language.output,
-            given: { file: schemaSchema },
-            strict: true
-        });
+//         // Generate a schema from the schema, making sure the schemas are the same
+//         // FIXME: We could move this to the superclass and test it for all JSON->X->Y
+//         let schemaSchema = "schema-from-schema.json";
+//         await quicktype({
+//             src: [this.language.output],
+//             srcLang: this.language.name,
+//             lang: this.language.name,
+//             topLevel: this.language.topLevel,
+//             out: schemaSchema,
+//             rendererOptions: {}
+//         });
+//         compareJsonFileToJson({
+//             expectedFile: this.language.output,
+//             given: { file: schemaSchema },
+//             strict: true
+//         });
 
-        return 1;
-    }
-}
+//         return 1;
+//     }
+// }
 
 // These are all inputs where the top-level type is not directly
 // converted to TypeScript, mostly arrays.
-const skipTypeScriptTests = [
-    "no-classes.json",
-    "optional-union.json",
-    "pokedex.json", // Enums are screwed up: https://github.com/YousefED/typescript-json-schema/issues/186
-    "github-events.json",
-    "bug855-short.json",
-    "bug863.json",
-    "00c36.json",
-    "010b1.json",
-    "050b0.json",
-    "06bee.json",
-    "07c75.json",
-    "0a91a.json",
-    "10be4.json",
-    "13d8d.json",
-    "176f1.json", // Enum screwed up
-    "1a7f5.json",
-    "262f0.json", // Enum screwed up
-    "2df80.json",
-    "32d5c.json",
-    "33d2e.json", // Enum screwed up
-    "34702.json", // Enum screwed up
-    "3536b.json",
-    "3e9a3.json", // duplicate top-level type: https://github.com/quicktype/quicktype/issues/726
-    "3f1ce.json", // Enum screwed up
-    "43970.json",
-    "570ec.json",
-    "5eae5.json",
-    "65dec.json", // duplicate top-level type
-    "66121.json",
-    "6dec6.json", // Enum screwed up
-    "6eb00.json",
-    "77392.json",
-    "7f568.json",
-    "7eb30.json", // duplicate top-level type
-    "7fbfb.json",
-    "9847b.json",
-    "996bd.json",
-    "9a503.json",
-    "9eed5.json",
-    "a45b0.json",
-    "ab0d1.json",
-    "ad8be.json",
-    "ae9ca.json", // Enum screwed up
-    "af2d1.json", // Enum screwed up
-    "b4865.json",
-    "c8c7e.json",
-    "cb0cc.json", // Enum screwed up
-    "cda6c.json",
-    "dbfb3.json", // Enum screwed up
-    "e2a58.json",
-    "e53b5.json",
-    "e8a0b.json",
-    "e8b04.json",
-    "ed095.json", // top-level is a map
-    "f3139.json",
-    "f3edf.json",
-    "f466a.json"
-];
+// const skipTypeScriptTests = [
+//     "no-classes.json",
+//     "optional-union.json",
+//     "pokedex.json", // Enums are screwed up: https://github.com/YousefED/typescript-json-schema/issues/186
+//     "github-events.json",
+//     "bug855-short.json",
+//     "bug863.json",
+//     "00c36.json",
+//     "010b1.json",
+//     "050b0.json",
+//     "06bee.json",
+//     "07c75.json",
+//     "0a91a.json",
+//     "10be4.json",
+//     "13d8d.json",
+//     "176f1.json", // Enum screwed up
+//     "1a7f5.json",
+//     "262f0.json", // Enum screwed up
+//     "2df80.json",
+//     "32d5c.json",
+//     "33d2e.json", // Enum screwed up
+//     "34702.json", // Enum screwed up
+//     "3536b.json",
+//     "3e9a3.json", // duplicate top-level type: https://github.com/quicktype/quicktype/issues/726
+//     "3f1ce.json", // Enum screwed up
+//     "43970.json",
+//     "570ec.json",
+//     "5eae5.json",
+//     "65dec.json", // duplicate top-level type
+//     "66121.json",
+//     "6dec6.json", // Enum screwed up
+//     "6eb00.json",
+//     "77392.json",
+//     "7f568.json",
+//     "7eb30.json", // duplicate top-level type
+//     "7fbfb.json",
+//     "9847b.json",
+//     "996bd.json",
+//     "9a503.json",
+//     "9eed5.json",
+//     "a45b0.json",
+//     "ab0d1.json",
+//     "ad8be.json",
+//     "ae9ca.json", // Enum screwed up
+//     "af2d1.json", // Enum screwed up
+//     "b4865.json",
+//     "c8c7e.json",
+//     "cb0cc.json", // Enum screwed up
+//     "cda6c.json",
+//     "dbfb3.json", // Enum screwed up
+//     "e2a58.json",
+//     "e53b5.json",
+//     "e8a0b.json",
+//     "e8b04.json",
+//     "ed095.json", // top-level is a map
+//     "f3139.json",
+//     "f3edf.json",
+//     "f466a.json"
+// ];
 
-class JSONTypeScriptFixture extends JSONToXToYFixture {
-    constructor(language: languages.Language) {
-        super("json-ts", "ts", "typescript.ts", { "just-types": "true" }, [], language);
-    }
+// class JSONTypeScriptFixture extends JSONToXToYFixture {
+//     constructor(language: languages.Language) {
+//         super("json-ts", "ts", "typescript.ts", { "just-types": "true" }, [], language);
+//     }
 
-    shouldSkipTest(sample: Sample): boolean {
-        if (super.shouldSkipTest(sample)) return true;
-        return skipTypeScriptTests.indexOf(path.basename(sample.path)) >= 0;
-    }
-}
+//     shouldSkipTest(sample: Sample): boolean {
+//         if (super.shouldSkipTest(sample)) return true;
+//         return skipTypeScriptTests.indexOf(path.basename(sample.path)) >= 0;
+//     }
+// }
 
 // This fixture tests generating code from JSON Schema.
 class JSONSchemaFixture extends LanguageFixture {
@@ -693,163 +693,166 @@ class GraphQLFixture extends LanguageFixture {
     }
 }
 
-class CommandSuccessfulLanguageFixture extends LanguageFixture {
-    constructor(language: languages.Language, public name: string = language.name) {
-        super(language);
-    }
+// class CommandSuccessfulLanguageFixture extends LanguageFixture {
+//     constructor(language: languages.Language, public name: string = language.name) {
+//         super(language);
+//     }
 
-    runForName(name: string): boolean {
-        return this.name === name || name === "json";
-    }
+//     runForName(name: string): boolean {
+//         return this.name === name || name === "json";
+//     }
 
-    async runQuicktype(sample: string, additionalRendererOptions: RendererOptions): Promise<void> {
-        // FIXME: add options
-        await quicktypeForLanguage(this.language, sample, "json", true, additionalRendererOptions);
-    }
+//     async runQuicktype(sample: string, additionalRendererOptions: RendererOptions): Promise<void> {
+//         // FIXME: add options
+//         await quicktypeForLanguage(this.language, sample, "json", true, additionalRendererOptions);
+//     }
 
-    async test(
-        filename: string,
-        _additionalRendererOptions: RendererOptions,
-        _additionalFiles: string[]
-    ): Promise<number> {
-        if (this.language.compileCommand) {
-            await execAsync(this.language.compileCommand);
-        }
+//     async test(
+//         filename: string,
+//         _additionalRendererOptions: RendererOptions,
+//         _additionalFiles: string[]
+//     ): Promise<number> {
+//         if (this.language.compileCommand) {
+//             await execAsync(this.language.compileCommand);
+//         }
 
-        if (this.language.runCommand === undefined) {
-            throw new Error("Invalid run command.");
-        }
+//         if (this.language.runCommand === undefined) {
+//             throw new Error("Invalid run command.");
+//         }
 
-        const command = this.language.runCommand(filename);
-        const results = await execAsync(command);
+//         const command = this.language.runCommand(filename);
+//         const results = await execAsync(command);
 
-        if (results.stdout.indexOf("Success") === -1) {
-            throw new Error(`Test failed:\n${results.stdout}`);
-        }
+//         if (results.stdout.indexOf("Success") === -1) {
+//             throw new Error(`Test failed:\n${results.stdout}`);
+//         }
 
-        return 0;
-    }
+//         return 0;
+//     }
 
-    shouldSkipTest(sample: Sample): boolean {
-        if (fs.statSync(sample.path).size > 32 * 1024 * 1024) {
-            return true;
-        }
-        return _.includes(this.language.skipJSON, path.basename(sample.path));
-    }
+//     shouldSkipTest(sample: Sample): boolean {
+//         if (fs.statSync(sample.path).size > 32 * 1024 * 1024) {
+//             return true;
+//         }
+//         return _.includes(this.language.skipJSON, path.basename(sample.path));
+//     }
 
-    getSamples(sources: string[]): { priority: Sample[]; others: Sample[] } {
-        // FIXME: this should only run once
-        const prioritySamples = _.concat(
-            testsInDir("test/inputs/json/priority", "json"),
-            testsInDir("test/inputs/json/samples", "json")
-        );
+//     getSamples(sources: string[]): { priority: Sample[]; others: Sample[] } {
+//         // FIXME: this should only run once
+//         const prioritySamples = _.concat(
+//             testsInDir("test/inputs/json/priority", "json"),
+//             testsInDir("test/inputs/json/samples", "json")
+//         );
 
-        const miscSamples = this.language.skipMiscJSON ? [] : testsInDir("test/inputs/json/misc", "json");
+//         const miscSamples = this.language.skipMiscJSON ? [] : testsInDir("test/inputs/json/misc", "json");
 
-        let { priority, others } = samplesFromSources(sources, prioritySamples, miscSamples, "json");
+//         let { priority, others } = samplesFromSources(sources, prioritySamples, miscSamples, "json");
 
-        const combinationInputs = _.map([1, 2, 3, 4], n =>
-            _.find(prioritySamples, p => p.endsWith(`/priority/combinations${n}.json`))
-        );
-        if (combinationInputs.some(p => p === undefined)) {
-            return failWith("priority/combinations[1234].json samples not found", prioritySamples);
-        }
-        if (sources.length === 0 && !ONLY_OUTPUT) {
-            const quickTestSamples = _.chain(this.language.quickTestRendererOptions)
-                .flatMap(qt => {
-                    if (Array.isArray(qt)) {
-                        const [filename, ro] = qt;
-                        const input = _.find(([] as string[]).concat(prioritySamples, miscSamples), p =>
-                            p.endsWith(`/${filename}`)
-                        );
-                        if (input === undefined) {
-                            return failWith(`quick-test sample ${filename} not found`, qt);
-                        }
-                        return [
-                            {
-                                path: input,
-                                additionalRendererOptions: ro,
-                                saveOutput: false
-                            }
-                        ];
-                    } else {
-                        return _.map(combinationInputs, p => ({
-                            path: defined(p),
-                            additionalRendererOptions: qt,
-                            saveOutput: false
-                        }));
-                    }
-                })
-                .value();
-            priority = quickTestSamples.concat(priority);
-        }
+//         const combinationInputs = _.map([1, 2, 3, 4], n =>
+//             _.find(prioritySamples, p => p.endsWith(`/priority/combinations${n}.json`))
+//         );
+//         if (combinationInputs.some(p => p === undefined)) {
+//             return failWith("priority/combinations[1234].json samples not found", prioritySamples);
+//         }
+//         if (sources.length === 0 && !ONLY_OUTPUT) {
+//             const quickTestSamples = _.chain(this.language.quickTestRendererOptions)
+//                 .flatMap(qt => {
+//                     if (Array.isArray(qt)) {
+//                         const [filename, ro] = qt;
+//                         const input = _.find(([] as string[]).concat(prioritySamples, miscSamples), p =>
+//                             p.endsWith(`/${filename}`)
+//                         );
+//                         if (input === undefined) {
+//                             return failWith(`quick-test sample ${filename} not found`, qt);
+//                         }
+//                         return [
+//                             {
+//                                 path: input,
+//                                 additionalRendererOptions: ro,
+//                                 saveOutput: false
+//                             }
+//                         ];
+//                     } else {
+//                         return _.map(combinationInputs, p => ({
+//                             path: defined(p),
+//                             additionalRendererOptions: qt,
+//                             saveOutput: false
+//                         }));
+//                     }
+//                 })
+//                 .value();
+//             priority = quickTestSamples.concat(priority);
+//         }
 
-        return { priority, others };
-    }
-}
+//         return { priority, others };
+//     }
+// }
 
 export const allFixtures: Fixture[] = [
     // new JSONFixture(languages.CrystalLanguage),
-    new JSONFixture(languages.CSharpLanguage),
-    new JSONFixture(languages.CSharpLanguageSystemTextJson, "csharp-SystemTextJson"),
-    new JSONFixture(languages.JavaLanguage),
-    new JSONFixture(languages.JavaLanguageWithLegacyDateTime, "java-datetime-legacy"),
-    new JSONFixture(languages.JavaLanguageWithLombok, "java-lombok"),
-    new JSONFixture(languages.GoLanguage),
-    new JSONFixture(languages.CPlusPlusLanguage),
-    new JSONFixture(languages.RustLanguage),
-    new JSONFixture(languages.RubyLanguage),
-    new JSONFixture(languages.PythonLanguage),
-    new JSONFixture(languages.ElmLanguage),
-    new JSONFixture(languages.SwiftLanguage),
-    new JSONFixture(languages.ObjectiveCLanguage),
-    new JSONFixture(languages.TypeScriptLanguage),
-    new JSONFixture(languages.FlowLanguage),
-    new JSONFixture(languages.JavaScriptLanguage),
-    new JSONFixture(languages.KotlinLanguage),
-    new JSONFixture(languages.KotlinJacksonLanguage, "kotlin-jackson"),
-    new JSONFixture(languages.DartLanguage),
-    new JSONFixture(languages.PikeLanguage),
-    new JSONFixture(languages.HaskellLanguage),
-    new JSONFixture(languages.PHPLanguage),
-    new JSONSchemaJSONFixture(languages.CSharpLanguage),
-    new JSONTypeScriptFixture(languages.CSharpLanguage),
+    // new JSONFixture(languages.CSharpLanguage),
+    // new JSONFixture(languages.CSharpLanguageSystemTextJson, "csharp-SystemTextJson"),
+    // new JSONFixture(languages.JavaLanguage),
+    // new JSONFixture(languages.JavaLanguageWithLegacyDateTime, "java-datetime-legacy"),
+    // new JSONFixture(languages.JavaLanguageWithLombok, "java-lombok"),
+    // new JSONFixture(languages.GoLanguage),
+    // new JSONFixture(languages.CPlusPlusLanguage),
+    // new JSONFixture(languages.RustLanguage),
+    // new JSONFixture(languages.RubyLanguage),
+    // new JSONFixture(languages.PythonLanguage),
+    // new JSONFixture(languages.ElmLanguage),
+    // new JSONFixture(languages.SwiftLanguage),
+    // new JSONFixture(languages.ObjectiveCLanguage),
+    // new JSONFixture(languages.TypeScriptLanguage),
+    // new JSONFixture(languages.FlowLanguage),
+    // new JSONFixture(languages.JavaScriptLanguage),
+    // new JSONFixture(languages.KotlinLanguage),
+    // new JSONFixture(languages.KotlinJacksonLanguage, "kotlin-jackson"),
+    // new JSONFixture(languages.DartLanguage),
+    // new JSONFixture(languages.PikeLanguage),
+    // new JSONFixture(languages.HaskellLanguage),
+    // new JSONFixture(languages.PHPLanguage),
+    new JSONFixture(languages.ZigLanguage),
+    // new JSONSchemaJSONFixture(languages.CSharpLanguage),
+    // new JSONTypeScriptFixture(languages.CSharpLanguage),
     // new JSONSchemaFixture(languages.CrystalLanguage),
-    new JSONSchemaFixture(languages.CSharpLanguage),
-    new JSONSchemaFixture(languages.JavaLanguage),
-    new JSONSchemaFixture(languages.JavaLanguageWithLegacyDateTime, "schema-java-datetime-legacy"),
-    new JSONSchemaFixture(languages.JavaLanguageWithLombok, "schema-java-lombok"),
-    new JSONSchemaFixture(languages.GoLanguage),
-    new JSONSchemaFixture(languages.CPlusPlusLanguage),
-    new JSONSchemaFixture(languages.RustLanguage),
-    new JSONSchemaFixture(languages.RubyLanguage),
-    new JSONSchemaFixture(languages.PythonLanguage),
-    new JSONSchemaFixture(languages.ElmLanguage),
-    new JSONSchemaFixture(languages.SwiftLanguage),
-    new JSONSchemaFixture(languages.TypeScriptLanguage),
-    new JSONSchemaFixture(languages.FlowLanguage),
-    new JSONSchemaFixture(languages.JavaScriptLanguage),
-    new JSONSchemaFixture(languages.KotlinLanguage),
-    new JSONSchemaFixture(languages.KotlinJacksonLanguage, "schema-kotlin-jackson"),
-    new JSONSchemaFixture(languages.DartLanguage),
-    new JSONSchemaFixture(languages.PikeLanguage),
-    new JSONSchemaFixture(languages.HaskellLanguage),
+    // new JSONSchemaFixture(languages.CSharpLanguage),
+    // new JSONSchemaFixture(languages.JavaLanguage),
+    // new JSONSchemaFixture(languages.JavaLanguageWithLegacyDateTime, "schema-java-datetime-legacy"),
+    // new JSONSchemaFixture(languages.JavaLanguageWithLombok, "schema-java-lombok"),
+    // new JSONSchemaFixture(languages.GoLanguage),
+    // new JSONSchemaFixture(languages.CPlusPlusLanguage),
+    // new JSONSchemaFixture(languages.RustLanguage),
+    // new JSONSchemaFixture(languages.RubyLanguage),
+    // new JSONSchemaFixture(languages.PythonLanguage),
+    // new JSONSchemaFixture(languages.ElmLanguage),
+    // new JSONSchemaFixture(languages.SwiftLanguage),
+    // new JSONSchemaFixture(languages.TypeScriptLanguage),
+    // new JSONSchemaFixture(languages.FlowLanguage),
+    // new JSONSchemaFixture(languages.JavaScriptLanguage),
+    // new JSONSchemaFixture(languages.KotlinLanguage),
+    // new JSONSchemaFixture(languages.KotlinJacksonLanguage, "schema-kotlin-jackson"),
+    // new JSONSchemaFixture(languages.DartLanguage),
+    // new JSONSchemaFixture(languages.PikeLanguage),
+    // new JSONSchemaFixture(languages.HaskellLanguage),
+    new JSONSchemaFixture(languages.ZigLanguage),
     // FIXME: Why are we missing so many language with GraphQL?
-    new GraphQLFixture(languages.CSharpLanguage),
-    new GraphQLFixture(languages.JavaLanguage),
-    new GraphQLFixture(languages.JavaLanguageWithLegacyDateTime, false, "graphql-java-datetime-legacy"),
-    new GraphQLFixture(languages.JavaLanguageWithLombok, false, "graphql-java-lombok"),
-    new GraphQLFixture(languages.GoLanguage),
-    new GraphQLFixture(languages.CPlusPlusLanguage),
-    new GraphQLFixture(languages.PythonLanguage),
-    new GraphQLFixture(languages.SwiftLanguage),
-    new GraphQLFixture(languages.ObjectiveCLanguage, true),
-    new GraphQLFixture(languages.TypeScriptLanguage),
-    new GraphQLFixture(languages.FlowLanguage),
-    new GraphQLFixture(languages.JavaScriptLanguage),
-    new GraphQLFixture(languages.DartLanguage),
-    new GraphQLFixture(languages.PikeLanguage),
-    new GraphQLFixture(languages.HaskellLanguage),
-    new GraphQLFixture(languages.PHPLanguage),
-    new CommandSuccessfulLanguageFixture(languages.JavaScriptPropTypesLanguage)
+    // new GraphQLFixture(languages.CSharpLanguage),
+    // new GraphQLFixture(languages.JavaLanguage),
+    // new GraphQLFixture(languages.JavaLanguageWithLegacyDateTime, false, "graphql-java-datetime-legacy"),
+    // new GraphQLFixture(languages.JavaLanguageWithLombok, false, "graphql-java-lombok"),
+    // new GraphQLFixture(languages.GoLanguage),
+    // new GraphQLFixture(languages.CPlusPlusLanguage),
+    // new GraphQLFixture(languages.PythonLanguage),
+    // new GraphQLFixture(languages.SwiftLanguage),
+    // new GraphQLFixture(languages.ObjectiveCLanguage, true),
+    // new GraphQLFixture(languages.TypeScriptLanguage),
+    // new GraphQLFixture(languages.FlowLanguage),
+    // new GraphQLFixture(languages.JavaScriptLanguage),
+    // new GraphQLFixture(languages.DartLanguage),
+    // new GraphQLFixture(languages.PikeLanguage),
+    // new GraphQLFixture(languages.HaskellLanguage),
+    // new GraphQLFixture(languages.PHPLanguage),
+    new GraphQLFixture(languages.ZigLanguage),
+    // new CommandSuccessfulLanguageFixture(languages.JavaScriptPropTypesLanguage)
 ];

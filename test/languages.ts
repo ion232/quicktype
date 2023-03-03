@@ -1167,3 +1167,24 @@ export const PHPLanguage: Language = {
     quickTestRendererOptions: [],
     sourceFiles: ["src/Language/Php.ts"]
 };
+
+export const ZigLanguage: Language = {
+    name: "zig",
+    base: "test/fixtures/zig",
+    setupCommand: "",
+    runCommand(sample: string) {
+        return `zig build run -- "${sample}"`;
+    },
+    diffViaSchema: true,
+    skipDiffViaSchema: [],
+    allowMissingNull: false,
+    features: ["enum", "union", "no-defaults"],
+    output: "src/quicktype.zig",
+    topLevel: "TopLevel",
+    skipJSON: [],
+    skipSchema: [],
+    skipMiscJSON: false,
+    rendererOptions: {},
+    quickTestRendererOptions: [],
+    sourceFiles: ["src/language/Zig.ts"]
+};
