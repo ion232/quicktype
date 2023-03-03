@@ -209,6 +209,10 @@ export class ZigRenderer extends ConvenienceRenderer {
         this._currentFilename = undefined;
     }
 
+    private visibility(): string {
+        return this._options.public ? "pub" : "";
+    }
+
     private emitBlock(preamble: Sourcelike, last: string, f: () => void): void {
         this.emitLine(preamble, "{");
         this.indent(f);
@@ -225,11 +229,11 @@ export class ZigRenderer extends ConvenienceRenderer {
             });
         };
         const attributes = () => {
-            this.emitBlock(["const attributes = ."], ";", attributesBlock);
+            this.emitBlock([this.visibility(), " const attributes = ."], ";", attributesBlock);
         };
 
         const extension = isSerialize ? "sb" : "db";
-        this.emitBlock([`const @"getty.${extension}" = struct `], ";", attributes);
+        this.emitBlock([this.visibility(), ` const @"getty.${extension}" = struct `], ";", attributes);
     }
 
     private emitSerdeBlocks(renameFields: Map<Name, string>) {
@@ -299,7 +303,7 @@ export class ZigRenderer extends ConvenienceRenderer {
             });
             this.emitSerdeBlocks(renameFields);
         };
-        this.emitBlock(["const ", name, " = struct "], ";", structBody);
+        this.emitBlock([this.visibility(), " const ", name, " = struct "], ";", structBody);
     }
 
     private emitClass(c: ClassType, className: Name): void {
@@ -320,7 +324,7 @@ export class ZigRenderer extends ConvenienceRenderer {
             });
             this.emitSerdeBlocks(renameFields);
         };
-        this.emitBlock(["const ", enumName, " = enum "], ";", enumBody);
+        this.emitBlock([this.visibility(), " const ", enumName, " = enum "], ";", enumBody);
     }
 
     private emitUnion(u: UnionType, unionName: Name): void {
@@ -328,7 +332,7 @@ export class ZigRenderer extends ConvenienceRenderer {
 
         const [, nonNulls] = removeNullFromUnion(u);
 
-        this.emitBlock(["const ", unionName, " = union(enum)"], ";", () => {
+        this.emitBlock([this.visibility(), " const ", unionName, " = union(enum)"], ";", () => {
             this.forEachUnionMember(u, nonNulls, "none", null, (fieldName, t) => {
                 this.emitLine([fieldName, ": ", this.zigType(t), ","]);
             });
