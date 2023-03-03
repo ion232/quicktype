@@ -1,0 +1,10 @@
+.{
+    .name = "quicktype-test",
+    .version = "1.0.0",
+    .dependencies = .{
+        .json = .{
+            .url = "https://github.com/getty-zig/json/archive/HEAD.tar.gz",
+            .hash = "122015c74573d704e9539b667638c8fde2372369a76f1bd4651df67fde6a48e4a8f7",
+        },
+    },
+}

@@ -13,6 +13,7 @@ test/elm/QuickType.elm
 test/fixtures/rust/target
 test/fixtures/java/target
 test/fixtures/java-lombok/target
+test/fixtures/zig/zig-cache
 
 packages/*/dist
 packages/*/node_modules
