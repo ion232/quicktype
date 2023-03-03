@@ -30,7 +30,7 @@ pub fn main() !void {
 }
 
 fn test_model(allocator: std.mem.Allocator, json_buffer: []const u8) !void {
-    const model = json.fromSlice(allocator, quicktype.TestFile, json_buffer) catch |e| {
+    const model = json.fromSlice(allocator, quicktype.TopLevel, json_buffer) catch |e| {
         return std.debug.print("Failed to deserialize: {any}.", .{e});
     };
     const string = json.toSlice(allocator, model) catch |e| {
